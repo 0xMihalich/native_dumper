@@ -27,7 +27,7 @@ dumper = NativeDumper(
 )
 ```
 
-### Read dump from PostgreSQL into file
+### Read dump from Clickhouse into file
 
 ```python
 file_name = "native.zstd"
@@ -43,7 +43,7 @@ with open(file_name, "wb") as fileobj:
     )
 ```
 
-### Write dump from file into PostgreSQL
+### Write dump from file into Clickhouse
 
 ```python
 file_name = "native.zstd"
@@ -57,7 +57,7 @@ with open(file_name, "rb") as fileobj:
     )
 ```
 
-### Write from PostgreSQL into PostgreSQL
+### Write from Clickhouse into Clickhouse
 
 Same server
 
