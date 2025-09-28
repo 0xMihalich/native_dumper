@@ -136,6 +136,14 @@ class HTTPCursor:
 
         return self.params["query"]
 
+    def metadata(
+        self,
+        table: str,
+    ) -> str:
+        """Get table metadata."""
+
+        return self.get_string(f"DESCRIBE TABLE {table}")
+
     def close(self) -> None:
         """Close HTTPCursor session."""
 

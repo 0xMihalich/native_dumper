@@ -3,8 +3,19 @@ from io import (
     BufferedWriter,
 )
 from types import MethodType
-from typing import BinaryIO
+from typing import (
+    Any,
+    BinaryIO,
+    Iterable,
+)
 
+from nativelib import (
+    Column,
+    NativeReader,
+    NativeWriter,
+)
+from pandas import DataFrame as PdFrame
+from polars import DataFrame as PlFrame
 from sqlparse import format as sql_format
 
 from .connector import CHConnector
@@ -89,13 +100,15 @@ class NativeDumper:
             self.logger.info(
                 f"Execute query {part or 1}/{total_prts}[copy method]"
             )
-            dump_method(*args, **kwargs)
+            output = dump_method(*args, **kwargs)
 
             if second_part:
                 for query in second_part:
                     part += 1
                     self.logger.info(f"Execute query {part}/{total_prts}")
                     cursor.execute(query)
+
+            return output
 
         return wrapper
 
@@ -105,6 +118,28 @@ class NativeDumper:
         if not query:
             return
         return sql_format(sql=query, strip_comments=True).strip().strip(";")
+
+    @multiquery
+    def to_reader(
+        self,
+        query: str | None = None,
+        table_name: str | None = None,
+    ) -> NativeReader:
+        """Get stream from Clickhouse as NativeReader object."""
+
+        if not query and not table_name:
+            error_message = "Query or table name not defined."
+            self.logger.error(error_message)
+            raise NativeDumperValueError(error_message)
+
+        if not query:
+            query = f"SELECT * FROM {table_name}"
+
+        self.logger.info(
+            f"Get NativeReader object from {self.connector.host}."
+        )
+        stream = self.cursor.get_stream(query)
+        return NativeReader(stream)
 
     @multiquery
     def read_dump(
@@ -216,6 +251,65 @@ class NativeDumper:
         except Exception as error:
             self.logger.error(error)
             raise NativeDumperWriteError(error)
+
+    def from_rows(
+        self,
+        dtype_data: Iterable[Any],
+        table_name: str,
+    ) -> None:
+        """Write from python list into Clickhouse table."""
+
+        if not table_name:
+            error_message = "Table name not defined."
+            self.logger.error(error_message)
+            raise NativeDumperValueError(error_message)
+
+        column_list = [
+            Column(*column.split("\t")[:2]) for column in
+            self.cursor.metadata(table_name).split("\n")
+        ]
+        writer = NativeWriter(column_list)
+
+        self.logger.info(
+            f"Start write into {self.connector.host}.{table_name}."
+        )
+
+        try:
+            self.cursor.upload_data(
+                table=table_name,
+                data=writer.from_rows(dtype_data),
+            )
+        except Exception as error:
+            self.logger.error(error)
+            raise NativeDumperWriteError(error)
+
+        self.logger.info(
+            f"Write into {self.connector.host}.{table_name} done."
+        )
+
+    def from_pandas(
+        self,
+        data_frame: PdFrame,
+        table_name: str,
+    ) -> None:
+        """Write from pandas.DataFrame into Clickhouse table."""
+
+        self.from_rows(
+            dtype_data=iter(data_frame.values),
+            table_name=table_name,
+        )
+
+    def from_polars(
+        self,
+        data_frame: PlFrame,
+        table_name: str,
+    ) -> None:
+        """Write from polars.DataFrame into Clickhouse table."""
+
+        self.from_rows(
+            dtype_data=data_frame.iter_rows(),
+            table_name=table_name,
+        )
 
     def close(self) -> None:
         """Close cursor session."""

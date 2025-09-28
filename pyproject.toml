@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "native_dumper"
-version = "0.0.1.0"
+version = "0.2.0.0"
 description = "Library for read and write Native format between Clickhouse and file."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -23,7 +23,10 @@ classifiers = [
 ]
 dependencies = [
     "lz4>=4.4.4",
+    "nativelib==0.2.0.0",
     "requests>=2.32.5",
+    "pandas>=2.1.0",
+    "polars>=0.20.31",
     "sqlparse>=0.5.3",
 ]
 

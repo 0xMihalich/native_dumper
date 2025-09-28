@@ -100,6 +100,58 @@ dumper.write_between(
 )
 ```
 
+### Get NativeReader object from stream
+
+```python
+
+table_name = "default.test_table_read"  # some table for read
+query = "select ..."  # or some sql query for read
+
+reader = dumper.to_reader(
+    query=query,
+    table_name=table_name,
+)
+```
+
+### Write from python lists
+
+```python
+
+dtype_data = Iterable[Any] | list[list[Any]] # some python data
+table_name = "default.test_table_write"  # some table for write
+
+dumper.from_rows(
+    dtype_data=dtype_data,
+    table_name=table_name,
+)
+```
+
+### Write from pandas.DataFrame
+
+```python
+
+data_frame = pandas.DataFrame({<some data>})
+table_name = "default.test_table_write"  # some table for write
+
+dumper.from_pandas(
+    data_frame=data_frame,
+    table_name=table_name,
+)
+```
+
+### Write from polars.DataFrame
+
+```python
+
+data_frame = polars.DataFrame({<some data>})
+table_name = "default.test_table_write"  # some table for write
+
+dumper.from_polars(
+    data_frame=data_frame,
+    table_name=table_name,
+)
+```
+
 ### Open Native file format
 
 Get info from my another repository https://github.com/0xMihalich/nativelib
@@ -109,7 +161,7 @@ Get info from my another repository https://github.com/0xMihalich/nativelib
 ### From pip
 
 ```bash
-pip install native_dumper
+pip install native-dumper
 ```
 
 ### From local directory
