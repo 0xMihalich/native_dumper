@@ -9,6 +9,7 @@
 * Change methods & work strategy
 * Readed dumps now not depends from compressed codecs
 * Add support for write between with differents Databases (not ClickHouse only)
+* Add MIT License
 
 ## 0.2.0.1
 
