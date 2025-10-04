@@ -1,5 +1,21 @@
 # Version History
 
+## 0.3.0.0
+
+* Redistribute project directories
+* Update requirements.txt
+* Update README.md
+* Change requests to rust pyo3 class
+* Change methods & work strategy
+* Readed dumps now not depends from compressed codecs
+* Add support for write between with differents Databases (not ClickHouse only)
+
+## 0.2.0.1
+
+* Update depends in requirements.txt
+* Change compressors to light-compressor
+* Speed-up stream read
+
 ## 0.2.0.0
 
 * Add nativelib to requirements.txt

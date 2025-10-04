@@ -1,0 +1,21 @@
+include README.md
+include LICENSE
+include Cargo.toml
+include Cargo.lock
+
+include src/native_dumper/common/pyo3http/Cargo.toml
+recursive-include src/native_dumper/common/pyo3http/src *.rs
+
+prune src/native_dumper/common/pyo3http/target
+prune */target
+prune target
+
+global-exclude *.pyd
+global-exclude *.so
+global-exclude *.dylib
+global-exclude *.dll
+global-exclude __pycache__
+global-exclude *.pyc
+global-exclude *.*~
+global-exclude *.orig
+global-exclude *.log

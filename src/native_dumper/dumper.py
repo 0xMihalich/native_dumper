@@ -2,15 +2,22 @@ from io import (
     BufferedReader,
     BufferedWriter,
 )
+from logging import Logger
 from types import MethodType
 from typing import (
     Any,
     BinaryIO,
     Iterable,
+    Union,
 )
 
+from light_compressor import (
+    CompressionMethod,
+    auto_detector,
+    define_reader,
+    define_writer,
+)
 from nativelib import (
-    Column,
     NativeReader,
     NativeWriter,
 )
@@ -18,21 +25,19 @@ from pandas import DataFrame as PdFrame
 from polars import DataFrame as PlFrame
 from sqlparse import format as sql_format
 
-from .connector import CHConnector
-from .cursor import HTTPCursor
-from .defines import DBMS_DEFAULT_TIMEOUT_SEC
-from .enums import CompressionMethod
-from .errors import (
+from .common import (
+    DBMS_DEFAULT_TIMEOUT_SEC,
+    CHConnector,
+    ClickhouseServerError,
+    DumperLogger,
+    HTTPCursor,
     NativeDumperError,
     NativeDumperReadError,
     NativeDumperValueError,
     NativeDumperWriteError,
+    chunk_query,
+    file_writer,
 )
-from .logger import (
-    DumperLogger,
-    Logger,
-)
-from .multiquery import chunk_query
 
 
 class NativeDumper:
@@ -49,6 +54,12 @@ class NativeDumper:
 
         try:
             self.connector = connector
+
+            if int(self.connector.port) == 9000:
+                raise ValueError(
+                    "NativeDumper don't support port 9000, please, use 8123."
+                )
+
             self.compression_method = compression_method
             self.logger = logger
             self.cursor = HTTPCursor(
@@ -59,7 +70,7 @@ class NativeDumper:
             )
             self.version = self.cursor.send_hello()
         except Exception as error:
-            logger.error(error)
+            logger.error(f"NativeDumperError: {error}")
             raise NativeDumperError(error)
 
         self.logger.info(
@@ -77,17 +88,17 @@ class NativeDumper:
             second_part: list[str]
 
             self: NativeDumper = args[0]
-            cursor: HTTPCursor = kwargs.get("cursor_src") or self.cursor
+            cursor: HTTPCursor = kwargs.get("dumper_src", self).cursor
             query: str = kwargs.get("query_src") or kwargs.get("query")
             part: int = 0
             first_part, second_part = chunk_query(self.query_formatter(query))
-            total_prts = len(sum((first_part, second_part), [])) or 1
+            total_parts = len(sum((first_part, second_part), [])) or 1
 
             if first_part:
                 self.logger.info("Multiquery detected.")
 
                 for query in first_part:
-                    self.logger.info(f"Execute query {part}/{total_prts}")
+                    self.logger.info(f"Execute query {part}/{total_parts}")
                     cursor.execute(query)
                     part += 1
 
@@ -98,16 +109,17 @@ class NativeDumper:
                         break
 
             self.logger.info(
-                f"Execute query {part or 1}/{total_prts}[copy method]"
+                f"Execute query {part or 1}/{total_parts}[copy method]"
             )
             output = dump_method(*args, **kwargs)
 
             if second_part:
                 for query in second_part:
                     part += 1
-                    self.logger.info(f"Execute query {part}/{total_prts}")
+                    self.logger.info(f"Execute query {part}/{total_parts}")
                     cursor.execute(query)
 
+            self.refresh()
             return output
 
         return wrapper
@@ -120,28 +132,6 @@ class NativeDumper:
         return sql_format(sql=query, strip_comments=True).strip().strip(";")
 
     @multiquery
-    def to_reader(
-        self,
-        query: str | None = None,
-        table_name: str | None = None,
-    ) -> NativeReader:
-        """Get stream from Clickhouse as NativeReader object."""
-
-        if not query and not table_name:
-            error_message = "Query or table name not defined."
-            self.logger.error(error_message)
-            raise NativeDumperValueError(error_message)
-
-        if not query:
-            query = f"SELECT * FROM {table_name}"
-
-        self.logger.info(
-            f"Get NativeReader object from {self.connector.host}."
-        )
-        stream = self.cursor.get_stream(query)
-        return NativeReader(stream)
-
-    @multiquery
     def read_dump(
         self,
         fileobj: BufferedWriter,
@@ -152,7 +142,7 @@ class NativeDumper:
 
         if not query and not table_name:
             error_message = "Query or table name not defined."
-            self.logger.error(error_message)
+            self.logger.error(f"NativeDumperValueError: {error_message}")
             raise NativeDumperValueError(error_message)
 
         if not query:
@@ -165,10 +155,13 @@ class NativeDumper:
                 "Reading native dump with compression "
                 f"{self.compression_method.name}."
             )
-            stream = self.cursor.get_response(query, True).raw
-            fileobj.write(stream.read())
+            stream = self.cursor.get_response(query)
+
+            while chunk := stream.read(262_144):
+                fileobj.write(chunk)
+
         except Exception as error:
-            self.logger.error(error)
+            self.logger.error(f"NativeDumperReadError: {error}")
             raise NativeDumperReadError(error)
 
         self.logger.info(f"Read from {self.connector.host} done.")
@@ -177,12 +170,13 @@ class NativeDumper:
         self,
         fileobj: BufferedReader | BinaryIO,
         table_name: str,
+        compression_method: CompressionMethod | None = None,
     ) -> None:
         """Write Native dump into Clickhouse."""
 
         if not table_name:
             error_message = "Table name not defined."
-            self.logger.error(error_message)
+            self.logger.error(f"NativeDumperValueError: {error_message}")
             raise NativeDumperValueError(error_message)
 
         self.logger.info(
@@ -190,12 +184,24 @@ class NativeDumper:
         )
 
         try:
+            if not compression_method:
+                compression_method = auto_detector(fileobj)
+
+            if compression_method != self.compression_method:
+                reader = define_reader(fileobj, compression_method)
+                data = define_writer(
+                    file_writer(reader),
+                    self.compression_method,
+                )
+            else:
+                data = file_writer(fileobj)
+
             self.cursor.upload_data(
                 table=table_name,
-                data=fileobj.read(),
+                data=data,
             )
         except Exception as error:
-            self.logger.error(error)
+            self.logger.error(f"NativeDumperWriteError: {error}")
             raise NativeDumperWriteError(error)
 
         self.logger.info(
@@ -208,49 +214,78 @@ class NativeDumper:
         table_dest: str,
         table_src: str | None = None,
         query_src: str | None = None,
-        cursor_src: HTTPCursor | None = None,
+        dumper_src: Union["NativeDumper", object] = None,
     ) -> None:
         """Write between Clickhouse servers."""
 
         if not query_src and not table_src:
             error_message = "Source query or table name not defined."
-            self.logger.error(error_message)
+            self.logger.error(f"NativeDumperValueError: {error_message}")
             raise NativeDumperValueError(error_message)
 
         if not table_dest:
             error_message = "Destination table name not defined."
-            self.logger.error(error_message)
+            self.logger.error(f"NativeDumperValueError: {error_message}")
             raise NativeDumperValueError(error_message)
 
         if not query_src:
             query_src = f"SELECT * FROM {table_src}"
 
-        cursor = cursor_src or HTTPCursor(
-            connector=self.connector,
-            compression_method=self.compression_method,
-            logger=self.logger,
-            timeout=self.cursor.timeout,
-        )
+        if not dumper_src:
+            cursor = HTTPCursor(
+                connector=self.connector,
+                compression_method=self.compression_method,
+                logger=self.logger,
+                timeout=self.cursor.timeout,
+            )
+            self.logger.info(
+                f"Set new connection for host {self.connector.host}."
+            )
+        elif dumper_src.__class__ is NativeDumper:
+            cursor = dumper_src.cursor
+        else:
+            reader = dumper_src.to_reader(
+                query=query_src,
+                table_name=table_src,
+            )
+            dtype_data = reader.to_rows()
+            return self.from_rows(
+                dtype_data=dtype_data,
+                table_name=table_dest,
+            )
 
-        if cursor.compression_method != self.compression_method:
-            error_message = "Compression method must be same."
-            self.logger.error(error_message)
+        stream = cursor.get_response(query_src)
+        status = stream.get_status()
+
+        if status != 200:
+            bufferobj = define_reader(stream, cursor.compression_method)
+            error = bufferobj.read().decode("utf-8", errors="replace")
+            cursor.logger.error(f"ClickhouseServerError: {error}")
+            raise ClickhouseServerError(error)
+
+        self.write_dump(stream, table_dest, cursor.compression_method)
+        self.refresh()
+
+    @multiquery
+    def to_reader(
+        self,
+        query: str | None = None,
+        table_name: str | None = None,
+    ) -> NativeReader:
+        """Get stream from Clickhouse as NativeReader object."""
+
+        if not query and not table_name:
+            error_message = "Query or table name not defined."
+            self.logger.error(f"NativeDumperValueError: {error_message}")
             raise NativeDumperValueError(error_message)
 
-        try:
-            self.logger.info(
-                f"Copy from {cursor.connector.host} into "
-                f"{self.connector.host}.{table_dest} started."
-            )
-            with self.cursor.get_response(query_src, True).raw as stream:
-                cursor.upload_data(table_dest, stream.read())
-            self.logger.info(
-                f"Copy from {cursor.connector.host} into "
-                f"{self.connector.host}.{table_dest} done."
-            )
-        except Exception as error:
-            self.logger.error(error)
-            raise NativeDumperWriteError(error)
+        if not query:
+            query = f"SELECT * FROM {table_name}"
+
+        self.logger.info(
+            f"Get NativeReader object from {self.connector.host}."
+        )
+        return self.cursor.get_stream(query)
 
     def from_rows(
         self,
@@ -261,14 +296,15 @@ class NativeDumper:
 
         if not table_name:
             error_message = "Table name not defined."
-            self.logger.error(error_message)
+            self.logger.error(f"NativeDumperValueError: {error_message}")
             raise NativeDumperValueError(error_message)
 
-        column_list = [
-            Column(*column.split("\t")[:2]) for column in
-            self.cursor.metadata(table_name).split("\n")
-        ]
+        column_list = self.cursor.metadata(table_name)
         writer = NativeWriter(column_list)
+        data = define_writer(
+            writer.from_rows(dtype_data),
+            self.compression_method,
+        )
 
         self.logger.info(
             f"Start write into {self.connector.host}.{table_name}."
@@ -277,10 +313,10 @@ class NativeDumper:
         try:
             self.cursor.upload_data(
                 table=table_name,
-                data=writer.from_rows(dtype_data),
+                data=data,
             )
         except Exception as error:
-            self.logger.error(error)
+            self.logger.error(f"NativeDumperWriteError: {error}")
             raise NativeDumperWriteError(error)
 
         self.logger.info(
@@ -311,7 +347,14 @@ class NativeDumper:
             table_name=table_name,
         )
 
+    def refresh(self) -> None:
+        """Refresh session."""
+
+        self.cursor.refresh()
+        self.logger.info(f"Connection to host {self.connector.host} updated.")
+
     def close(self) -> None:
-        """Close cursor session."""
+        """Close session."""
 
         self.cursor.close()
+        self.logger.info(f"Connection to host {self.connector.host} closed.")

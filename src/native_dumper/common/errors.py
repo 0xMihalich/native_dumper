@@ -1,3 +1,7 @@
+class ClickhouseServerError(ValueError):
+    """Clickhouse errors."""
+
+
 class NativeDumperError(Exception):
     """NativeDumper base error."""
 

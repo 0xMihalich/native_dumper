@@ -10,7 +10,7 @@ from os import makedirs
 from os.path import dirname
 from sys import stdout
 
-from .version import __version__
+from ..version import __version__
 
 
 def root_dir() -> str:

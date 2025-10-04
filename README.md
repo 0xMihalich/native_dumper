@@ -113,43 +113,33 @@ reader = dumper.to_reader(
 )
 ```
 
-### Write from python lists
+NativeReader has three methods available,
+but only one of the methods is available at a time within a single session.
 
 ```python
-
-dtype_data = Iterable[Any] | list[list[Any]] # some python data
-table_name = "default.test_table_write"  # some table for write
-
-dumper.from_rows(
-    dtype_data=dtype_data,
-    table_name=table_name,
-)
+# read as python generator object
+reader.to_rows()
+# or read as pandas.DataFrame
+reader.to_pandas()
+# or read as polars.DataFrame
+reader.to_polars()
 ```
 
-### Write from pandas.DataFrame
+### Write from python objects into target table
 
 ```python
+# some table for write data
+table_name = "default.test_table_write"
+dtype_data: Itarable[Any]
+pandas_frame: pandas.DataFrame
+polars_frame: polars.DataFrame
 
-data_frame = pandas.DataFrame({<some data>})
-table_name = "default.test_table_write"  # some table for write
-
-dumper.from_pandas(
-    data_frame=data_frame,
-    table_name=table_name,
-)
-```
-
-### Write from polars.DataFrame
-
-```python
-
-data_frame = polars.DataFrame({<some data>})
-table_name = "default.test_table_write"  # some table for write
-
-dumper.from_polars(
-    data_frame=data_frame,
-    table_name=table_name,
-)
+# write from python object
+dumper.from_rows(dtype_data, table_name)
+# write from pandas.DataFrame
+dumper.from_pandas(pandas_frame, table_name)
+# write from polars.DataFrame
+dumper.from_polars(polars_frame, table_name)
 ```
 
 ### Open Native file format

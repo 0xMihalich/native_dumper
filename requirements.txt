@@ -1,6 +1,3 @@
-lz4>=4.4.4
-nativelib==0.2.0.0
-requests>=2.32.5
-pandas>=2.1.0
-polars>=0.20.31
+light-compressor==0.0.1.4
+nativelib==0.2.0.3
 sqlparse>=0.5.3
