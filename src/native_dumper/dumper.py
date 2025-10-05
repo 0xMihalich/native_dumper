@@ -69,6 +69,8 @@ class NativeDumper:
                 timeout=timeout,
             )
             self.version = self.cursor.send_hello()
+        except ClickhouseServerError as error:
+            raise error
         except Exception as error:
             logger.error(f"NativeDumperError: {error}")
             raise NativeDumperError(error)
@@ -90,7 +92,7 @@ class NativeDumper:
             self: NativeDumper = args[0]
             cursor: HTTPCursor = kwargs.get("dumper_src", self).cursor
             query: str = kwargs.get("query_src") or kwargs.get("query")
-            part: int = 0
+            part: int = 1
             first_part, second_part = chunk_query(self.query_formatter(query))
             total_parts = len(sum((first_part, second_part), [])) or 1
 
@@ -109,7 +111,7 @@ class NativeDumper:
                         break
 
             self.logger.info(
-                f"Execute query {part or 1}/{total_parts}[copy method]"
+                f"Execute read {part}/{total_parts}[native mode]"
             )
             output = dump_method(*args, **kwargs)
 
@@ -160,6 +162,11 @@ class NativeDumper:
             while chunk := stream.read(262_144):
                 fileobj.write(chunk)
 
+            stream.close()
+            fileobj.close()
+
+        except ClickhouseServerError as error:
+            raise error
         except Exception as error:
             self.logger.error(f"NativeDumperReadError: {error}")
             raise NativeDumperReadError(error)
@@ -200,6 +207,9 @@ class NativeDumper:
                 table=table_name,
                 data=data,
             )
+            fileobj.close()
+        except ClickhouseServerError as error:
+            raise error
         except Exception as error:
             self.logger.error(f"NativeDumperWriteError: {error}")
             raise NativeDumperWriteError(error)
@@ -228,9 +238,6 @@ class NativeDumper:
             self.logger.error(f"NativeDumperValueError: {error_message}")
             raise NativeDumperValueError(error_message)
 
-        if not query_src:
-            query_src = f"SELECT * FROM {table_src}"
-
         if not dumper_src:
             cursor = HTTPCursor(
                 connector=self.connector,
@@ -249,10 +256,14 @@ class NativeDumper:
                 table_name=table_src,
             )
             dtype_data = reader.to_rows()
-            return self.from_rows(
+            self.from_rows(
                 dtype_data=dtype_data,
                 table_name=table_dest,
             )
+            return reader.close()
+
+        if not query_src:
+            query_src = f"SELECT * FROM {table_src}"
 
         stream = cursor.get_response(query_src)
         status = stream.get_status()
@@ -315,6 +326,8 @@ class NativeDumper:
                 table=table_name,
                 data=data,
             )
+        except ClickhouseServerError as error:
+            raise error
         except Exception as error:
             self.logger.error(f"NativeDumperWriteError: {error}")
             raise NativeDumperWriteError(error)

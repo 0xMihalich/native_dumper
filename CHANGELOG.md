@@ -1,5 +1,18 @@
 # Version History
 
+## 0.3.0.1
+
+* Add attribute is_connected to HTTPCursor
+* Add attribute server_version to HTTPCursor
+* Add close files after read/write operations
+* Add special error 92 (EMPTY_DATA_PASSED) when server sending empty data
+* Improve login error
+* Improve other errors
+* Improve read method from another database
+* Change log messages for read operations
+* Update requirements.txt depends nativelib==0.2.0.4
+* Update requirements.txt depends light-compressor==0.0.1.5
+
 ## 0.3.0.0
 
 * Redistribute project directories
