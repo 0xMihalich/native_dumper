@@ -1,5 +1,10 @@
 # Version History
 
+## 0.3.0.2
+
+* Change log message
+* Improve refresh database after write
+
 ## 0.3.0.1
 
 * Add attribute is_connected to HTTPCursor

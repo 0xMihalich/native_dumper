@@ -111,7 +111,7 @@ class NativeDumper:
                         break
 
             self.logger.info(
-                f"Execute read {part}/{total_parts}[native mode]"
+                f"Execute stream {part}/{total_parts} [native mode]"
             )
             output = dump_method(*args, **kwargs)
 
@@ -121,7 +121,9 @@ class NativeDumper:
                     self.logger.info(f"Execute query {part}/{total_parts}")
                     cursor.execute(query)
 
-            self.refresh()
+            if output:
+                self.refresh()
+
             return output
 
         return wrapper
@@ -164,7 +166,7 @@ class NativeDumper:
 
             stream.close()
             fileobj.close()
-
+            return True
         except ClickhouseServerError as error:
             raise error
         except Exception as error:
@@ -217,6 +219,7 @@ class NativeDumper:
         self.logger.info(
             f"Write into {self.connector.host}.{table_name} done."
         )
+        self.refresh()
 
     @multiquery
     def write_between(
@@ -275,7 +278,6 @@ class NativeDumper:
             raise ClickhouseServerError(error)
 
         self.write_dump(stream, table_dest, cursor.compression_method)
-        self.refresh()
 
     @multiquery
     def to_reader(
@@ -335,6 +337,7 @@ class NativeDumper:
         self.logger.info(
             f"Write into {self.connector.host}.{table_name} done."
         )
+        self.refresh()
 
     def from_pandas(
         self,
