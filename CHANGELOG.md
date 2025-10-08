@@ -1,5 +1,15 @@
 # Version History
 
+## 0.3.0.3
+
+* Update requirements.txt depends nativelib==0.2.0.5
+* Update requirements.txt depends light-compressor==0.0.1.6
+* Update file_writer set chunk size to 1MB
+* Add check error to execute function
+* Add readed and sending size output into log
+* Fix logger create folder in initialize
+* Fix error code detector
+
 ## 0.3.0.2
 
 * Change log message

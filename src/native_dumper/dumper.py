@@ -26,6 +26,7 @@ from polars import DataFrame as PlFrame
 from sqlparse import format as sql_format
 
 from .common import (
+    CHUNK_SIZE,
     DBMS_DEFAULT_TIMEOUT_SEC,
     CHConnector,
     ClickhouseServerError,
@@ -47,10 +48,13 @@ class NativeDumper:
         self,
         connector: CHConnector,
         compression_method: CompressionMethod = CompressionMethod.ZSTD,
-        logger: Logger = DumperLogger(),
+        logger: Logger | None = None,
         timeout: int = DBMS_DEFAULT_TIMEOUT_SEC,
     ) -> None:
         """Class initialization."""
+
+        if not logger:
+            logger = DumperLogger()
 
         try:
             self.connector = connector
@@ -160,20 +164,25 @@ class NativeDumper:
                 f"{self.compression_method.name}."
             )
             stream = self.cursor.get_response(query)
+            size = 0
 
-            while chunk := stream.read(262_144):
-                fileobj.write(chunk)
+            while chunk := stream.read(CHUNK_SIZE):
+                size += fileobj.write(chunk)
 
             stream.close()
             fileobj.close()
+            self.logger.info(f"Successfully read {size} bytes.")
+
+            if not size:
+                self.logger.warning("Empty data read!")
+
+            self.logger.info(f"Read from {self.connector.host} done.")
             return True
         except ClickhouseServerError as error:
             raise error
         except Exception as error:
             self.logger.error(f"NativeDumperReadError: {error}")
             raise NativeDumperReadError(error)
-
-        self.logger.info(f"Read from {self.connector.host} done.")
 
     def write_dump(
         self,
@@ -203,13 +212,20 @@ class NativeDumper:
                     self.compression_method,
                 )
             else:
-                data = file_writer(fileobj)
+                reader = fileobj
+                data = file_writer(reader)
 
             self.cursor.upload_data(
                 table=table_name,
                 data=data,
             )
-            fileobj.close()
+            size = reader.tell()
+            self.logger.info(f"Successfully sending {size} bytes.")
+
+            if not size:
+                self.logger.warning("Empty data send!")
+
+            reader.close()
         except ClickhouseServerError as error:
             raise error
         except Exception as error:
@@ -263,20 +279,18 @@ class NativeDumper:
                 dtype_data=dtype_data,
                 table_name=table_dest,
             )
+            size = reader.tell()
+            self.logger.info(f"Successfully sending {size} bytes.")
+
+            if not size:
+                self.logger.warning("Empty data send!")
+
             return reader.close()
 
         if not query_src:
             query_src = f"SELECT * FROM {table_src}"
 
         stream = cursor.get_response(query_src)
-        status = stream.get_status()
-
-        if status != 200:
-            bufferobj = define_reader(stream, cursor.compression_method)
-            error = bufferobj.read().decode("utf-8", errors="replace")
-            cursor.logger.error(f"ClickhouseServerError: {error}")
-            raise ClickhouseServerError(error)
-
         self.write_dump(stream, table_dest, cursor.compression_method)
 
     @multiquery

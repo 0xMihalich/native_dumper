@@ -10,14 +10,15 @@ from nativelib import (
     NativeReader,
 )
 
+from ..version import __version__
 from .connector import CHConnector
+from .defines import CHUNK_SIZE
 from .errors import ClickhouseServerError
 from .logger import Logger
 from .pyo3http import (
     HttpResponse,
     HttpSession,
 )
-from ..version import __version__
 
 
 def string_error(data: bytes) -> str:
@@ -92,13 +93,29 @@ class HTTPCursor:
 
         self.params["query"] = query
 
-        return self.session.post(
+        response = self.session.post(
             url=self.url,
             data=data,
             params=self.params,
             headers=self.headers,
             timeout=self.timeout,
         )
+        status = response.get_status()
+
+        if status != 200:
+
+            if not self.is_connected:
+                error = string_error(response.read())
+                response.close()
+            else:
+                bufferobj = define_reader(response, self.compression_method)
+                error = string_error(bufferobj.read(CHUNK_SIZE))
+                bufferobj.close()
+
+            self.logger.error(f"ClickhouseServerError: {error}")
+            raise ClickhouseServerError(error)
+
+        return response
 
     def get_stream(
         self,
@@ -107,12 +124,6 @@ class HTTPCursor:
         """Get answer from server as unpacked stream file."""
 
         stream = self.get_response(query)
-        status = stream.get_status()
-
-        if status != 200 and not self.is_connected:
-            error = string_error(stream.read())
-            self.logger.error(f"ClickhouseServerError: {error}")
-            raise ClickhouseServerError(error)
 
         try:
             bufferobj = define_reader(stream, self.compression_method)
@@ -128,8 +139,9 @@ class HTTPCursor:
             self.logger.error(f"ClickhouseServerError: {error}")
             raise ClickhouseServerError(error)
 
-        if check_error == b"Code" or status != 200:
-            error = string_error(bufferobj.read())
+        if check_error == b"Code":
+            error = string_error(bufferobj.read(CHUNK_SIZE))
+            bufferobj.close()
             self.logger.error(f"ClickhouseServerError: {error}")
             raise ClickhouseServerError(error)
 
@@ -142,17 +154,10 @@ class HTTPCursor:
     ) -> None:
         """Download data into table."""
 
-        response = self.get_response(
+        self.get_response(
             query=f"INSERT INTO {table} FORMAT Native",
             data=data,
         )
-        status = response.get_status()
-
-        if status != 200:
-            bufferobj = define_reader(response, self.compression_method)
-            error = string_error(bufferobj.read())
-            self.logger.error(f"ClickhouseServerError: {error}")
-            raise ClickhouseServerError(error)
 
     def metadata(
         self,
@@ -172,14 +177,7 @@ class HTTPCursor:
     ) -> None:
         """Simple exetute method without return."""
 
-        response = self.get_response(query)
-        status = response.get_status()
-
-        if status != 200:
-            bufferobj = define_reader(response, self.compression_method)
-            error = string_error(bufferobj.read())
-            self.logger.error(f"ClickhouseServerError: {error}")
-            raise ClickhouseServerError(error)
+        self.get_response(query)
 
     def last_query(self) -> str:
         """Show last query."""

@@ -3,6 +3,7 @@
 from .connector import CHConnector
 from .cursor import HTTPCursor
 from .defines import (
+    CHUNK_SIZE,
     DBMS_DEFAULT_TIMEOUT_SEC,
     DEFAULT_DATABASE,
     DEFAULT_PASSWORD,
@@ -26,6 +27,7 @@ from .writer import file_writer
 
 
 __all__ = (
+    "CHUNK_SIZE",
     "DBMS_DEFAULT_TIMEOUT_SEC",
     "DEFAULT_DATABASE",
     "DEFAULT_PASSWORD",
