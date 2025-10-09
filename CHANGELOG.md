@@ -1,5 +1,10 @@
 # Version History
 
+## 0.3.0.4
+
+* Update depends nativelib==0.2.0.7
+* Add internal methods __read_dump, __write_between and __to_reader to force kwargs creation
+
 ## 0.3.0.3
 
 * Update requirements.txt depends nativelib==0.2.0.5

@@ -140,13 +140,13 @@ class NativeDumper:
         return sql_format(sql=query, strip_comments=True).strip().strip(";")
 
     @multiquery
-    def read_dump(
+    def __read_dump(
         self,
         fileobj: BufferedWriter,
-        query: str | None = None,
-        table_name: str | None = None,
-    ) -> None:
-        """Read Native dump from Clickhouse."""
+        query: str | None,
+        table_name: str | None,
+    ) -> bool:
+        """Internal method read_dump for generate kwargs to decorator."""
 
         if not query and not table_name:
             error_message = "Query or table name not defined."
@@ -183,6 +183,97 @@ class NativeDumper:
         except Exception as error:
             self.logger.error(f"NativeDumperReadError: {error}")
             raise NativeDumperReadError(error)
+
+    @multiquery
+    def __write_between(
+        self,
+        table_dest: str,
+        table_src: str | None,
+        query_src: str | None,
+        dumper_src: Union["NativeDumper", object],
+    ) -> bool:
+        """Internal method write_between for generate kwargs to decorator."""
+
+        if not query_src and not table_src:
+            error_message = "Source query or table name not defined."
+            self.logger.error(f"NativeDumperValueError: {error_message}")
+            raise NativeDumperValueError(error_message)
+
+        if not table_dest:
+            error_message = "Destination table name not defined."
+            self.logger.error(f"NativeDumperValueError: {error_message}")
+            raise NativeDumperValueError(error_message)
+
+        if not dumper_src:
+            cursor = HTTPCursor(
+                connector=self.connector,
+                compression_method=self.compression_method,
+                logger=self.logger,
+                timeout=self.cursor.timeout,
+            )
+            self.logger.info(
+                f"Set new connection for host {self.connector.host}."
+            )
+        elif dumper_src.__class__ is NativeDumper:
+            cursor = dumper_src.cursor
+        else:
+            reader = dumper_src.to_reader(
+                query=query_src,
+                table_name=table_src,
+            )
+            dtype_data = reader.to_rows()
+            self.from_rows(
+                dtype_data=dtype_data,
+                table_name=table_dest,
+            )
+            size = reader.tell()
+            self.logger.info(f"Successfully sending {size} bytes.")
+
+            if not size:
+                self.logger.warning("Empty data send!")
+
+            return reader.close()
+
+        if not query_src:
+            query_src = f"SELECT * FROM {table_src}"
+
+        stream = cursor.get_response(query_src)
+        self.write_dump(stream, table_dest, cursor.compression_method)
+
+    @multiquery
+    def __to_reader(
+        self,
+        query: str | None,
+        table_name: str | None,
+    ) -> NativeReader:
+        """Internal method to_reader for generate kwargs to decorator."""
+
+        if not query and not table_name:
+            error_message = "Query or table name not defined."
+            self.logger.error(f"NativeDumperValueError: {error_message}")
+            raise NativeDumperValueError(error_message)
+
+        if not query:
+            query = f"SELECT * FROM {table_name}"
+
+        self.logger.info(
+            f"Get NativeReader object from {self.connector.host}."
+        )
+        return self.cursor.get_stream(query)
+
+    def read_dump(
+        self,
+        fileobj: BufferedWriter,
+        query: str | None = None,
+        table_name: str | None = None,
+    ) -> bool:
+        """Read Native dump from Clickhouse."""
+
+        return self.__read_dump(
+            fileobj=fileobj,
+            query=query,
+            table_name=table_name,
+        )
 
     def write_dump(
         self,
@@ -237,63 +328,22 @@ class NativeDumper:
         )
         self.refresh()
 
-    @multiquery
     def write_between(
         self,
         table_dest: str,
         table_src: str | None = None,
         query_src: str | None = None,
         dumper_src: Union["NativeDumper", object] = None,
-    ) -> None:
+    ) -> bool:
         """Write between Clickhouse servers."""
 
-        if not query_src and not table_src:
-            error_message = "Source query or table name not defined."
-            self.logger.error(f"NativeDumperValueError: {error_message}")
-            raise NativeDumperValueError(error_message)
+        return self.__write_between(
+            table_dest=table_dest,
+            table_src=table_src,
+            query_src=query_src,
+            dumper_src=dumper_src,
+        )
 
-        if not table_dest:
-            error_message = "Destination table name not defined."
-            self.logger.error(f"NativeDumperValueError: {error_message}")
-            raise NativeDumperValueError(error_message)
-
-        if not dumper_src:
-            cursor = HTTPCursor(
-                connector=self.connector,
-                compression_method=self.compression_method,
-                logger=self.logger,
-                timeout=self.cursor.timeout,
-            )
-            self.logger.info(
-                f"Set new connection for host {self.connector.host}."
-            )
-        elif dumper_src.__class__ is NativeDumper:
-            cursor = dumper_src.cursor
-        else:
-            reader = dumper_src.to_reader(
-                query=query_src,
-                table_name=table_src,
-            )
-            dtype_data = reader.to_rows()
-            self.from_rows(
-                dtype_data=dtype_data,
-                table_name=table_dest,
-            )
-            size = reader.tell()
-            self.logger.info(f"Successfully sending {size} bytes.")
-
-            if not size:
-                self.logger.warning("Empty data send!")
-
-            return reader.close()
-
-        if not query_src:
-            query_src = f"SELECT * FROM {table_src}"
-
-        stream = cursor.get_response(query_src)
-        self.write_dump(stream, table_dest, cursor.compression_method)
-
-    @multiquery
     def to_reader(
         self,
         query: str | None = None,
@@ -301,18 +351,10 @@ class NativeDumper:
     ) -> NativeReader:
         """Get stream from Clickhouse as NativeReader object."""
 
-        if not query and not table_name:
-            error_message = "Query or table name not defined."
-            self.logger.error(f"NativeDumperValueError: {error_message}")
-            raise NativeDumperValueError(error_message)
-
-        if not query:
-            query = f"SELECT * FROM {table_name}"
-
-        self.logger.info(
-            f"Get NativeReader object from {self.connector.host}."
+        return self.__to_reader(
+            query=query,
+            table_name=table_name,
         )
-        return self.cursor.get_stream(query)
 
     def from_rows(
         self,
