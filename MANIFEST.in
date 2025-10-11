@@ -5,6 +5,7 @@ include Cargo.lock
 
 include src/native_dumper/common/pyo3http/Cargo.toml
 recursive-include src/native_dumper/common/pyo3http/src *.rs
+recursive-include src/native_dumper/common/ *.pyi
 
 prune src/native_dumper/common/pyo3http/target
 prune */target

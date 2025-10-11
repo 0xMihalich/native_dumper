@@ -668,6 +668,13 @@ impl HttpSession {
     ) -> PyResult<HttpResponse> {
         self.post(py, url, headers, params, data, timeout)
     }
+
+    fn close(&mut self) {
+        if let Ok(rt) = Arc::try_unwrap(std::mem::replace(&mut self.rt, Arc::new(Runtime::new().unwrap()))) {
+            rt.shutdown_background();
+        }
+        let _ = std::mem::replace(&mut self.client, Client::new());
+    }
 }
 
 #[pymodule]

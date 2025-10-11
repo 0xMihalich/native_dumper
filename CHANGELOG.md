@@ -1,5 +1,16 @@
 # Version History
 
+## 0.3.1.0
+
+* Add pyo3http.pyi files for pyo3 modules descriptions
+* Add close() method to pyo3http.HttpSession
+* Update MANIFEST.in
+* Update depends setuptools>=80.9.0
+* Update depends wheel>=0.45.1
+* Update depends setuptools-rust>=1.12.0
+* Update depends light-compressor==0.0.1.7
+* Update depends nativelib==0.2.1.0
+
 ## 0.3.0.4
 
 * Update depends nativelib==0.2.0.7
