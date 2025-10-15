@@ -44,7 +44,7 @@ class HTTPCursor:
         self.compression_method = compression_method
         self.logger = logger
         self.timeout = timeout
-        self.session = HttpSession()
+        self.session = HttpSession(timeout=self.timeout)
         self.is_connected = False
         self.headers = {
             "Accept": "*/*",
@@ -95,10 +95,10 @@ class HTTPCursor:
 
         response = self.session.post(
             url=self.url,
-            data=data,
             params=self.params,
             headers=self.headers,
             timeout=self.timeout,
+            data=data,
         )
         status = response.get_status()
 

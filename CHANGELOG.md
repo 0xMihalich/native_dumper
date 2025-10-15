@@ -2,8 +2,10 @@
 
 ## 0.3.1.1
 
-* Update Cargo.toml depends
 * Add wheels automake
+* Update Cargo.toml depends
+* Update pyo3http
+* Refactor HTTPCursor
 
 ## 0.3.1.0
 
