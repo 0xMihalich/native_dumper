@@ -81,7 +81,6 @@ jobs:
         CIBW_BEFORE_ALL: "pip install cython setuptools wheel setuptools-rust -r requirements.txt"
         CIBW_BEFORE_BUILD: "powershell -Command \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://win.rustup.rs/' -OutFile 'rustup-init.exe'; .\\rustup-init.exe -y\" && rustup target add x86_64-pc-windows-msvc"
         CIBW_SKIP: "*-win32"
-        CIBW_ENVIRONMENT_WINDOWS: "PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1"
 
     - name: Upload Windows wheels
       uses: actions/upload-artifact@v4
