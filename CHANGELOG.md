@@ -1,5 +1,10 @@
 # Version History
 
+## 0.3.1.1
+
+* Update Cargo.toml depends
+* Add wheels automake
+
 ## 0.3.1.0
 
 * Add pyo3http.pyi files for pyo3 modules descriptions
