@@ -48,7 +48,8 @@ jobs:
         CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
         CIBW_ARCHS_LINUX: "x86_64 aarch64"
         CIBW_BEFORE_ALL: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source $HOME/.cargo/env && pip install cython setuptools wheel setuptools-rust -r requirements.txt"
-        CIBW_BEFORE_BUILD: "yum install -y rust cargo || apt-get update && apt-get install -y rustc cargo || dnf install -y rust cargo"
+        CIBW_BEFORE_BUILD: "yum install -y openssl-devel rust cargo || apt-get update && apt-get install -y libssl-dev pkg-config rustc cargo || dnf install -y openssl-devel rust cargo"
+        CIBW_ENVIRONMENT_LINUX: "OPENSSL_DIR=/usr"
         CIBW_SKIP: "*-musllinux*"
 
     - name: Upload Linux wheels
