@@ -114,7 +114,7 @@ impl HttpResponse {
         let is_complete = self.is_complete.clone();
         let first_read_data = self.first_read_data.clone();
         let seek_allowed = self.seek_allowed.clone();
-        let data: Vec<u8> = py.allow_threads(move || {
+        let data: Vec<u8> = py.detach(move || {
             rt.block_on(async {
                 let mut response_guard = response.lock().unwrap();
                 let mut buffer_guard = buffer.lock().unwrap();
@@ -219,7 +219,7 @@ impl HttpResponse {
         let is_complete = self.is_complete.clone();
         let first_read_data = self.first_read_data.clone();
         let seek_allowed = self.seek_allowed.clone();
-        let data: Vec<u8> = py.allow_threads(move || {
+        let data: Vec<u8> = py.detach(move || {
             rt.block_on(async {
                 let mut response_guard = response.lock().unwrap();
                 let mut buffer_guard = buffer.lock().unwrap();
