@@ -5,6 +5,7 @@
 * Add wheels automake
 * Update Cargo.toml depends
 * Update pyo3http
+* Change pyo3http.pyi
 * Refactor HTTPCursor
 
 ## 0.3.1.0

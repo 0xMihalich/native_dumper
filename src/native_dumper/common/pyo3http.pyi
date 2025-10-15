@@ -187,7 +187,7 @@ class HttpSession:
 
     def __init__(
         self,
-        timeout: float | int | None = None,
+        timeout: float | int | None,
     ) -> None:
         """Initialize an HTTP session.
 
@@ -203,10 +203,10 @@ class HttpSession:
     def post(
         self,
         url: str,
-        headers: dict[str, str] | None = None,
-        params: dict[str, str] | None = None,
-        data: bytes | Iterable[bytes | bytearray] | None = None,
-        timeout: float | int | None = None,
+        headers: dict[str, str] | None,
+        params: dict[str, str] | None,
+        data: bytes | Iterable[bytes | bytearray] | None,
+        timeout: float | int | None,
     ) -> HttpResponse:
         """Send a POST request.
 
@@ -234,10 +234,10 @@ class HttpSession:
     def post_stream(
         self,
         url: str,
-        headers: dict[str, str] | None = None,
-        params: dict[str, str] | None = None,
-        data: bytes | Iterable[bytes | bytearray] | None = None,
-        timeout: float | int | None = None,
+        headers: dict[str, str] | None,
+        params: dict[str, str] | None,
+        data: bytes | Iterable[bytes | bytearray] | None,
+        timeout: float | int | None,
     ) -> HttpResponse:
         """Send a POST request (alias for post method).
 
