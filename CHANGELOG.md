@@ -1,5 +1,10 @@
 # Version History
 
+## 0.3.1.2
+
+* Add NativeDumper.dbname attribute with constant string "clickhouse"
+* Update setup.cfg
+
 ## 0.3.1.1
 
 * Add wheels automake

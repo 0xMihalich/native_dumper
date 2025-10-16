@@ -79,6 +79,7 @@ class NativeDumper:
             logger.error(f"NativeDumperError: {error}")
             raise NativeDumperError(error)
 
+        self.dbname = "clickhouse"
         self.logger.info(
             f"NativeDumper initialized for host {self.connector.host}"
             f"[version {self.version}]"
