@@ -23,7 +23,7 @@ setup(
     ],
     install_requires=[
         "light-compressor==0.0.1.7",
-        "nativelib==0.2.1.0",
+        "nativelib==0.2.1.1",
         "sqlparse>=0.5.3",
     ],
     zip_safe=False,
