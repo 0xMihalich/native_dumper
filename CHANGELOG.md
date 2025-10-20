@@ -1,5 +1,15 @@
 # Version History
 
+## 0.3.2.0
+
+* Update depends light-compressor==0.0.1.8
+* Update depends nativelib==0.2.1.2
+* Fix multiquery wrapper
+* Add transfer_diagram and DBMetadata to make log diagrams
+* Add _dbmeta attribute
+* Add log output diagram
+* Add auto upload to pip
+
 ## 0.3.1.2
 
 * Add NativeDumper.dbname attribute with constant string "clickhouse"

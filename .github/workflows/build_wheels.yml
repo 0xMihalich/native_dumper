@@ -40,10 +40,10 @@ jobs:
     - name: Build Linux x86_64 wheels
       run: python -m cibuildwheel --output-dir wheel_prebuild --platform linux
       env:
-        CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
+        CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
         CIBW_ARCHS_LINUX: "x86_64"
-        CIBW_BEFORE_ALL: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source $HOME/.cargo/env && pip install cython setuptools wheel setuptools-rust -r requirements.txt"
-        CIBW_BEFORE_BUILD: "yum install -y openssl-devel rust cargo || apt-get update && apt-get install -y libssl-dev pkg-config rustc cargo || dnf install -y openssl-devel rust cargo"
+        CIBW_BEFORE_ALL: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source $HOME/.cargo/env"
+        CIBW_BEFORE_BUILD: "yum install -y openssl-devel rust cargo || apt-get update && apt-get install -y libssl-dev pkg-config rustc cargo || dnf install -y openssl-devel rust cargo && pip install cython setuptools wheel setuptools-rust -r requirements.txt"
         CIBW_ENVIRONMENT_LINUX: "OPENSSL_DIR=/usr"
         CIBW_SKIP: "*-musllinux*"
 
@@ -89,10 +89,10 @@ jobs:
     - name: Build Linux aarch64 wheels
       run: python -m cibuildwheel --output-dir wheel_prebuild --platform linux
       env:
-        CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
+        CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
         CIBW_ARCHS_LINUX: "aarch64"
-        CIBW_BEFORE_ALL: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source $HOME/.cargo/env && pip install cython setuptools wheel setuptools-rust -r requirements.txt"
-        CIBW_BEFORE_BUILD: "yum install -y openssl-devel rust cargo || apt-get update && apt-get install -y libssl-dev pkg-config rustc cargo || dnf install -y openssl-devel rust cargo"
+        CIBW_BEFORE_ALL: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source $HOME/.cargo/env"
+        CIBW_BEFORE_BUILD: "yum install -y openssl-devel rust cargo || apt-get update && apt-get install -y libssl-dev pkg-config rustc cargo || dnf install -y openssl-devel rust cargo && pip install cython setuptools wheel setuptools-rust -r requirements.txt"
         CIBW_ENVIRONMENT_LINUX: "OPENSSL_DIR=/usr"
         CIBW_SKIP: "*-musllinux*"
 
@@ -121,7 +121,7 @@ jobs:
     - name: Build Windows wheels
       run: python -m cibuildwheel --output-dir wheel_prebuild --platform windows
       env:
-        CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
+        CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
         CIBW_ARCHS_WINDOWS: "AMD64"
         CIBW_BEFORE_ALL: "pip install cython setuptools wheel setuptools-rust -r requirements.txt"
         CIBW_BEFORE_BUILD: "powershell -Command \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://win.rustup.rs/' -OutFile 'rustup-init.exe'; .\\rustup-init.exe -y\" && rustup target add x86_64-pc-windows-msvc"
@@ -152,7 +152,7 @@ jobs:
     - name: Build macOS wheels
       run: python -m cibuildwheel --output-dir wheel_prebuild --platform macos
       env:
-        CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
+        CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
         CIBW_ARCHS_MACOS: "x86_64 arm64"
         CIBW_BEFORE_ALL: "pip install cython setuptools wheel setuptools-rust -r requirements.txt"
         CIBW_BEFORE_BUILD: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source $HOME/.cargo/env && rustup target add x86_64-apple-darwin && rustup target add aarch64-apple-darwin"
@@ -186,3 +186,25 @@ jobs:
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  upload_pypi:
+    name: Upload to PyPI
+    needs: [build_linux_x86_64, build_linux_aarch64, build_windows, build_macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download all wheel artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*-wheels"
+          path: dist
+          merge-multiple: true
+      
+      - name: List files for debugging
+        run: find dist -name "*.whl" | sort
+      
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          skip-existing: true

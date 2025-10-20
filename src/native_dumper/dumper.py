@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from io import (
     BufferedReader,
     BufferedWriter,
@@ -30,6 +31,7 @@ from .common import (
     DBMS_DEFAULT_TIMEOUT_SEC,
     CHConnector,
     ClickhouseServerError,
+    DBMetadata,
     DumperLogger,
     HTTPCursor,
     NativeDumperError,
@@ -38,6 +40,8 @@ from .common import (
     NativeDumperWriteError,
     chunk_query,
     file_writer,
+    make_columns,
+    transfer_diagram,
 )
 
 
@@ -73,6 +77,7 @@ class NativeDumper:
                 timeout=timeout,
             )
             self.version = self.cursor.send_hello()
+            self._dbmeta: DBMetadata | None = None
         except ClickhouseServerError as error:
             raise error
         except Exception as error:
@@ -95,7 +100,7 @@ class NativeDumper:
             second_part: list[str]
 
             self: NativeDumper = args[0]
-            cursor: HTTPCursor = kwargs.get("dumper_src", self).cursor
+            cursor: HTTPCursor = (kwargs.get("dumper_src") or self).cursor
             query: str = kwargs.get("query_src") or kwargs.get("query")
             part: int = 1
             first_part, second_part = chunk_query(self.query_formatter(query))
@@ -164,6 +169,18 @@ class NativeDumper:
                 "Reading native dump with compression "
                 f"{self.compression_method.name}."
             )
+            columns = make_columns(self.cursor.metadata(f"({query})"))
+            source = DBMetadata(
+                name=self.dbname,
+                version=self.version,
+                columns=columns,
+            )
+            destination = DBMetadata(
+                name="file",
+                version=fileobj.name,
+                columns=columns,
+            )
+            self.logger.info(transfer_diagram(source, destination))
             stream = self.cursor.get_response(query)
             size = 0
 
@@ -212,11 +229,15 @@ class NativeDumper:
                 logger=self.logger,
                 timeout=self.cursor.timeout,
             )
+            src_dbname = self.dbname
+            src_version = self.version
             self.logger.info(
                 f"Set new connection for host {self.connector.host}."
             )
         elif dumper_src.__class__ is NativeDumper:
             cursor = dumper_src.cursor
+            src_dbname = dumper_src.dbname
+            src_version = dumper_src.version
         else:
             reader = dumper_src.to_reader(
                 query=query_src,
@@ -226,6 +247,7 @@ class NativeDumper:
             self.from_rows(
                 dtype_data=dtype_data,
                 table_name=table_dest,
+                source=dumper_src._dbmeta,
             )
             size = reader.tell()
             self.logger.info(f"Successfully sending {size} bytes.")
@@ -238,6 +260,17 @@ class NativeDumper:
         if not query_src:
             query_src = f"SELECT * FROM {table_src}"
 
+        source = DBMetadata(
+            name=src_dbname,
+            version=src_version,
+            columns=make_columns(cursor.metadata(f"({query_src})")),
+        )
+        destination = DBMetadata(
+            name=self.dbname,
+            version=self.version,
+            columns=make_columns(self.cursor.metadata(table_dest)),
+        )
+        self.logger.info(transfer_diagram(source, destination))
         stream = cursor.get_response(query_src)
         self.write_dump(stream, table_dest, cursor.compression_method)
 
@@ -259,6 +292,11 @@ class NativeDumper:
 
         self.logger.info(
             f"Get NativeReader object from {self.connector.host}."
+        )
+        self._dbmeta = DBMetadata(
+            name=self.dbname,
+            version=self.version,
+            columns=make_columns(self.cursor.metadata(f"({query})")),
         )
         return self.cursor.get_stream(query)
 
@@ -361,6 +399,7 @@ class NativeDumper:
         self,
         dtype_data: Iterable[Any],
         table_name: str,
+        source: DBMetadata | None = None,
     ) -> None:
         """Write from python list into Clickhouse table."""
 
@@ -369,6 +408,13 @@ class NativeDumper:
             self.logger.error(f"NativeDumperValueError: {error_message}")
             raise NativeDumperValueError(error_message)
 
+        if not source:
+            source = DBMetadata(
+                name="python",
+                version="iterable object",
+                columns={"Unknown": "Unknown"},
+            )
+
         column_list = self.cursor.metadata(table_name)
         writer = NativeWriter(column_list)
         data = define_writer(
@@ -376,6 +422,13 @@ class NativeDumper:
             self.compression_method,
         )
 
+        destination = DBMetadata(
+            name=self.dbname,
+            version=self.version,
+            columns=make_columns(column_list),
+        )
+
+        self.logger.info(transfer_diagram(source, destination))
         self.logger.info(
             f"Start write into {self.connector.host}.{table_name}."
         )
@@ -406,6 +459,14 @@ class NativeDumper:
         self.from_rows(
             dtype_data=iter(data_frame.values),
             table_name=table_name,
+            source=DBMetadata(
+                name="pandas",
+                version="DataFrame",
+                columns=OrderedDict(zip(
+                    data_frame.columns,
+                    [str(dtype) for dtype in data_frame.dtypes],
+                )),
+            )
         )
 
     def from_polars(
@@ -418,6 +479,14 @@ class NativeDumper:
         self.from_rows(
             dtype_data=data_frame.iter_rows(),
             table_name=table_name,
+            source=DBMetadata(
+                name="polars",
+                version="DataFrame",
+                columns=OrderedDict(zip(
+                    data_frame.columns,
+                    [str(dtype) for dtype in data_frame.dtypes],
+                )),
+            )
         )
 
     def refresh(self) -> None:

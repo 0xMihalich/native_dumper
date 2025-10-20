@@ -1,5 +1,6 @@
 """Common utilities."""
 
+from .columns import make_columns
 from .connector import CHConnector
 from .cursor import HTTPCursor
 from .defines import (
@@ -9,6 +10,11 @@ from .defines import (
     DEFAULT_PASSWORD,
     DEFAULT_PORT,
     DEFAULT_USER,
+)
+from .diagram import (
+    DBMetadata,
+    format_table,
+    transfer_diagram,
 )
 from .errors import (
     ClickhouseServerError,
@@ -35,6 +41,7 @@ __all__ = (
     "DEFAULT_USER",
     "CHConnector",
     "ClickhouseServerError",
+    "DBMetadata",
     "DumperLogger",
     "HTTPCursor",
     "HttpResponse",
@@ -45,4 +52,7 @@ __all__ = (
     "NativeDumperWriteError",
     "chunk_query",
     "file_writer",
+    "format_table",
+    "make_columns",
+    "transfer_diagram",
 )
