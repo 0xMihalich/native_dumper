@@ -1,5 +1,9 @@
 # Version History
 
+## 0.3.2.1
+
+* Update depends nativelib==0.2.1.3
+
 ## 0.3.2.0
 
 * Update depends light-compressor==0.0.1.8
