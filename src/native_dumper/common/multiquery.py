@@ -1,22 +1,30 @@
+from re import split
+
 def chunk_query(query: str | None) -> tuple[list[str]]:
     """Chunk multiquery to queryes."""
 
     if not query:
         return [], []
 
-    first_part: list[str] = [
-        part.strip()
-        for part in query.split(";")
-    ]
+    pattern = r";(?=(?:[^']*'[^']*')*[^']*$)"
+    parts = [part.strip() for part in split(pattern, query) if part.strip()]
+
+    if not parts:
+        return [], []
+
+    first_part: list[str] = []
     second_part: list[str] = []
 
-    for _ in first_part:
-        second_part.append(first_part.pop())
-        if any(
-            word == second_part[-1][:len(word)].lower()
-            for word in ("with", "select")
+    for i, part in enumerate(parts):
+        first_part.append(part)
+
+        if (i + 1 < len(parts) and parts[i + 1].strip().lower().startswith(
+                ('with ', 'select ')
+            )
         ):
-            second_part = list(reversed(second_part))
+            second_part = parts[i + 1:]
             break
+    else:
+        second_part = []
 
     return first_part, second_part

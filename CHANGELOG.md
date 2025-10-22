@@ -1,5 +1,9 @@
 # Version History
 
+## 0.3.2.2
+
+* Fix chunk_query for ignoring semicolons inside string literals
+
 ## 0.3.2.1
 
 * Update depends nativelib==0.2.1.3
