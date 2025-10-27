@@ -1,5 +1,11 @@
 # Version History
 
+## 0.3.2.3
+
+* Update depends light-compressor==0.0.1.9
+* Update depends nativelib==0.2.2.1
+* Refactor variable info.precission -> info.precision
+
 ## 0.3.2.2
 
 * Fix chunk_query for ignoring semicolons inside string literals
