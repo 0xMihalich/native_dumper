@@ -1,5 +1,9 @@
 # Version History
 
+## 0.3.3.0
+
+* Improve Multiquery decorator
+
 ## 0.3.2.3
 
 * Update depends light-compressor==0.0.1.9

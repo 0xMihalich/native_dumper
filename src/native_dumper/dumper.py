@@ -104,11 +104,11 @@ class NativeDumper:
             query: str = kwargs.get("query_src") or kwargs.get("query")
             part: int = 1
             first_part, second_part = chunk_query(self.query_formatter(query))
-            total_parts = len(sum((first_part, second_part), [])) or 1
+            total_parts = len(sum((first_part, second_part), [])) + int(
+                bool(kwargs.get("table_name") or kwargs.get("table_src"))
+            )
 
-            if first_part:
-                self.logger.info("Multiquery detected.")
-
+            if len(first_part) > 1:
                 for query in first_part:
                     self.logger.info(f"Execute query {part}/{total_parts}")
                     cursor.execute(query)
