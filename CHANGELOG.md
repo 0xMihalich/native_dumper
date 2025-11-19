@@ -1,5 +1,9 @@
 # Version History
 
+## 0.3.3.1
+
+* Improve chunk_query function
+
 ## 0.3.3.0
 
 * Improve Multiquery decorator
