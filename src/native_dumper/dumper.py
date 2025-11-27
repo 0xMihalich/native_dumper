@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from gc import collect
 from io import (
     BufferedReader,
     BufferedWriter,
@@ -134,6 +135,7 @@ class NativeDumper:
             if output:
                 self.refresh()
 
+            collect()
             return output
 
         return wrapper
@@ -186,6 +188,7 @@ class NativeDumper:
 
             while chunk := stream.read(CHUNK_SIZE):
                 size += fileobj.write(chunk)
+                del chunk
 
             stream.close()
             fileobj.close()
@@ -349,6 +352,7 @@ class NativeDumper:
                 table=table_name,
                 data=data,
             )
+            collect()
             size = reader.tell()
             self.logger.info(f"Successfully sending {size} bytes.")
 
@@ -429,6 +433,7 @@ class NativeDumper:
         )
 
         self.logger.info(transfer_diagram(source, destination))
+        collect()
         self.logger.info(
             f"Start write into {self.connector.host}.{table_name}."
         )

@@ -1,5 +1,10 @@
 # Version History
 
+## 0.3.3.2
+
+* Del chunks after write
+* Add gc collect
+
 ## 0.3.3.1
 
 * Improve chunk_query function
