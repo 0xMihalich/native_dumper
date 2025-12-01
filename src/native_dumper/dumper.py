@@ -243,7 +243,7 @@ class NativeDumper:
             src_version = dumper_src.version
         else:
             reader = dumper_src.to_reader(
-                query=query_src,
+                query=query_src.strip().strip(";"),
                 table_name=table_src,
             )
             dtype_data = reader.to_rows()
@@ -262,6 +262,8 @@ class NativeDumper:
 
         if not query_src:
             query_src = f"SELECT * FROM {table_src}"
+        else:
+            query_src = query_src.strip().strip(";")
 
         source = DBMetadata(
             name=src_dbname,

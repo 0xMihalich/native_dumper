@@ -1,5 +1,10 @@
 # Version History
 
+## 0.3.3.3
+
+* Fix ; in query_src
+* Change CHUNK_SIZE to 16KB
+
 ## 0.3.3.2
 
 * Del chunks after write
