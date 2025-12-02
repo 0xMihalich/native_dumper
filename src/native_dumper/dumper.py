@@ -242,8 +242,11 @@ class NativeDumper:
             src_dbname = dumper_src.dbname
             src_version = dumper_src.version
         else:
+            if query_src:
+                query_src = query_src.strip().strip(";")
+
             reader = dumper_src.to_reader(
-                query=query_src.strip().strip(";"),
+                query=query_src,
                 table_name=table_src,
             )
             dtype_data = reader.to_rows()

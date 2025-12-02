@@ -1,5 +1,10 @@
 # Version History
 
+## 0.3.4.1
+
+* Fix AttributeError: 'NoneType' object has no attribute 'strip'
+* Disable Linux Aarch64
+
 ## 0.3.4.0
 
 * Update depends sqlparse>=0.5.4
