@@ -1,5 +1,9 @@
 # Version History
 
+## 0.3.4.0
+
+* Update depends sqlparse>=0.5.4
+
 ## 0.3.3.3
 
 * Fix ; in query_src
