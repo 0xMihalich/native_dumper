@@ -3,7 +3,7 @@ from setuptools_rust import RustExtension
 
 setup(
     name="native-dumper",
-    version="0.3.4.1",
+    version="0.3.4.2",
     description=(
         "Library for read and write Native format between Clickhouse and file."
     ),
@@ -23,7 +23,7 @@ setup(
     ],
     install_requires=[
         "light-compressor==0.0.1.9",
-        "nativelib==0.2.2.1",
+        "nativelib==0.2.2.2",
         "sqlparse>=0.5.4",
     ],
     zip_safe=False,

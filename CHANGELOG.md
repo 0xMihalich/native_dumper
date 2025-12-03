@@ -1,5 +1,9 @@
 # Version History
 
+## 0.3.4.2
+
+* Update depends nativelib==0.2.2.2
+
 ## 0.3.4.1
 
 * Fix AttributeError: 'NoneType' object has no attribute 'strip'
