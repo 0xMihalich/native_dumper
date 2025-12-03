@@ -20,7 +20,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.10'
 
     - name: Install cibuildwheel
       run: pip install cibuildwheel
@@ -28,7 +28,7 @@ jobs:
     - name: Install ONLY cibuildwheel dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install cython setuptools wheel setuptools-rust
+        pip install cython==0.29.33 setuptools wheel setuptools-rust
       shell: bash
 
     - name: Install Rust
@@ -40,10 +40,10 @@ jobs:
     - name: Build Linux x86_64 wheels
       run: python -m cibuildwheel --output-dir wheel_prebuild --platform linux
       env:
-        CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
+        CIBW_BUILD: "cp310-* cp311-*"
         CIBW_ARCHS_LINUX: "x86_64"
         CIBW_BEFORE_ALL: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source $HOME/.cargo/env"
-        CIBW_BEFORE_BUILD: "yum install -y openssl-devel rust cargo || apt-get update && apt-get install -y libssl-dev pkg-config rustc cargo || dnf install -y openssl-devel rust cargo && pip install cython setuptools wheel setuptools-rust -r requirements.txt"
+        CIBW_BEFORE_BUILD: "yum install -y openssl-devel rust cargo || apt-get update && apt-get install -y libssl-dev pkg-config rustc cargo || dnf install -y openssl-devel rust cargo && pip install cython==0.29.33 setuptools wheel setuptools-rust -r requirements.txt"
         CIBW_ENVIRONMENT_LINUX: "OPENSSL_DIR=/usr"
         CIBW_SKIP: "*-musllinux*"
 
@@ -52,55 +52,6 @@ jobs:
       with:
         name: linux-x86_64-wheels
         path: wheel_prebuild/*.whl
-
-  # build_linux_aarch64:
-  #   name: Build Linux aarch64 wheels
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #   - uses: actions/checkout@v4
-  #     with:
-  #       submodules: true
-
-  #   - name: Set up Python
-  #     uses: actions/setup-python@v4
-  #     with:
-  #       python-version: '3.11'
-
-  #   - name: Install cibuildwheel
-  #     run: pip install cibuildwheel
-
-  #   - name: Install ONLY cibuildwheel dependencies
-  #     run: |
-  #       python -m pip install --upgrade pip
-  #       pip install cython setuptools wheel setuptools-rust
-  #     shell: bash
-
-  #   - name: Install Rust
-  #     run: |
-  #       curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-  #       echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-  #     shell: bash
-
-  #   - name: Set up QEMU for ARM emulation
-  #     uses: docker/setup-qemu-action@v3
-  #     with:
-  #       platforms: arm64
-
-  #   - name: Build Linux aarch64 wheels
-  #     run: python -m cibuildwheel --output-dir wheel_prebuild --platform linux
-  #     env:
-  #       CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
-  #       CIBW_ARCHS_LINUX: "aarch64"
-  #       CIBW_BEFORE_ALL: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source $HOME/.cargo/env"
-  #       CIBW_BEFORE_BUILD: "yum install -y openssl-devel rust cargo || apt-get update && apt-get install -y libssl-dev pkg-config rustc cargo || dnf install -y openssl-devel rust cargo && pip install cython setuptools wheel setuptools-rust -r requirements.txt"
-  #       CIBW_ENVIRONMENT_LINUX: "OPENSSL_DIR=/usr"
-  #       CIBW_SKIP: "*-musllinux*"
-
-  #   - name: Upload Linux aarch64 wheels
-  #     uses: actions/upload-artifact@v4
-  #     with:
-  #       name: linux-aarch64-wheels
-  #       path: wheel_prebuild/*.whl
 
   build_windows:
     name: Build Windows wheels
@@ -113,7 +64,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.10'
 
     - name: Install cibuildwheel
       run: pip install cibuildwheel
@@ -121,9 +72,9 @@ jobs:
     - name: Build Windows wheels
       run: python -m cibuildwheel --output-dir wheel_prebuild --platform windows
       env:
-        CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
+        CIBW_BUILD: "cp310-* cp311-*"
         CIBW_ARCHS_WINDOWS: "AMD64"
-        CIBW_BEFORE_ALL: "pip install cython setuptools wheel setuptools-rust -r requirements.txt"
+        CIBW_BEFORE_ALL: "pip install cython==0.29.33 setuptools wheel setuptools-rust -r requirements.txt"
         CIBW_BEFORE_BUILD: "powershell -Command \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://win.rustup.rs/' -OutFile 'rustup-init.exe'; .\\rustup-init.exe -y\" && rustup target add x86_64-pc-windows-msvc"
         CIBW_SKIP: "*-win32"
 
@@ -144,7 +95,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.10'
 
     - name: Install cibuildwheel
       run: pip install cibuildwheel
@@ -152,9 +103,9 @@ jobs:
     - name: Build macOS wheels
       run: python -m cibuildwheel --output-dir wheel_prebuild --platform macos
       env:
-        CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
+        CIBW_BUILD: "cp310-* cp311-*"
         CIBW_ARCHS_MACOS: "x86_64 arm64"
-        CIBW_BEFORE_ALL: "pip install cython setuptools wheel setuptools-rust -r requirements.txt"
+        CIBW_BEFORE_ALL: "pip install cython==0.29.33 setuptools wheel setuptools-rust -r requirements.txt"
         CIBW_BEFORE_BUILD: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source $HOME/.cargo/env && rustup target add x86_64-apple-darwin && rustup target add aarch64-apple-darwin"
         MACOSX_DEPLOYMENT_TARGET: "10.14"
 
@@ -167,7 +118,6 @@ jobs:
   create_release:
     name: Create Release with wheels
     runs-on: ubuntu-latest
-    # needs: [build_linux_x86_64, build_linux_aarch64, build_windows, build_macos]
     needs: [build_linux_x86_64, build_windows, build_macos]
     if: startsWith(github.ref, 'refs/tags/')
     
@@ -190,7 +140,6 @@ jobs:
 
   upload_pypi:
     name: Upload to PyPI
-    # needs: [build_linux_x86_64, build_linux_aarch64, build_windows, build_macos]
     needs: [build_linux_x86_64, build_windows, build_macos]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
