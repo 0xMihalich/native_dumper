@@ -20,7 +20,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: '3.11'
 
     - name: Install cibuildwheel
       run: pip install cibuildwheel
@@ -43,7 +43,7 @@ jobs:
         CIBW_BUILD: "cp310-* cp311-*"
         CIBW_ARCHS_LINUX: "x86_64"
         CIBW_BEFORE_ALL: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source $HOME/.cargo/env"
-        CIBW_BEFORE_BUILD: "yum install -y openssl-devel rust cargo || apt-get update && apt-get install -y libssl-dev pkg-config rustc cargo || dnf install -y openssl-devel rust cargo && pip install cython==0.29.33 setuptools wheel setuptools-rust -r requirements.txt"
+        CIBW_BEFORE_BUILD: "yum install -y openssl-devel rust cargo || apt-get update && apt-get install -y libssl-dev pkg-config rustc cargo || dnf install -y openssl-devel rust cargo && pip install cython setuptools wheel setuptools-rust -r requirements.txt"
         CIBW_ENVIRONMENT_LINUX: "OPENSSL_DIR=/usr"
         CIBW_SKIP: "*-musllinux*"
 
