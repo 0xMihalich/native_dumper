@@ -2,7 +2,7 @@
 
 ## 0.3.4.6
 
-* Back wheels to 3.10-3.14
+* Back wheels to 3.10-3.12
 * Back depends light-compressor==0.0.1.9
 * Back depends nativelib==0.2.2.2
 
