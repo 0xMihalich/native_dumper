@@ -1,5 +1,9 @@
 # Version History
 
+## 0.3.4.4
+
+* Fix compile wheels
+
 ## 0.3.4.3
 
 * Update depends light-compressor==0.0.2.0
