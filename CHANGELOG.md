@@ -1,5 +1,9 @@
 # Version History
 
+## 0.3.4.5
+
+* Downgrade rust module to pyo3==0.20
+
 ## 0.3.4.4
 
 * Fix compile wheels
