@@ -1,5 +1,15 @@
 # Version History
 
+## 0.3.4.7
+
+* Fix read query with comments in last line
+* Back wheels to 3.10-3.14
+* Back pyo3 to 0.26.0
+* Back pyo3http to latest version
+* Update depends light-compressor==0.0.2.1
+* Update depends nativelib==0.2.2.4
+* Update setuptools, wheel and setuptools-rust to latest versions
+
 ## 0.3.4.6
 
 * Back wheels to 3.10-3.12

@@ -98,9 +98,9 @@ impl HttpResponse {
 #[pymethods]
 impl HttpResponse {
 
-    fn read(&self, py: Python, size: Option<usize>) -> PyResult<PyObject> {
+    fn read(&self, py: Python, size: Option<usize>) -> PyResult<Py<PyBytes>> {
         if self.is_reading_complete() {
-            return Ok(PyBytes::new(py, &[]).to_object(py));
+            return Ok(PyBytes::new(py, &[]).into());
         }
 
         if let Some(1) = size {
@@ -114,7 +114,7 @@ impl HttpResponse {
         let is_complete = self.is_complete.clone();
         let first_read_data = self.first_read_data.clone();
         let seek_allowed = self.seek_allowed.clone();
-        let data: Vec<u8> = py.allow_threads(move || {
+        let data: Vec<u8> = py.detach(move || {
             rt.block_on(async {
                 let mut response_guard = response.lock().unwrap();
                 let mut buffer_guard = buffer.lock().unwrap();
@@ -204,12 +204,12 @@ impl HttpResponse {
             })
         });
 
-        Ok(PyBytes::new(py, &data).to_object(py))
+        Ok(PyBytes::new(py, &data).into())
     }
 
-    fn read1(&self, py: Python) -> PyResult<PyObject> {
+    fn read1(&self, py: Python) -> PyResult<Py<PyBytes>> {
         if self.is_reading_complete() {
-            return Ok(PyBytes::new(py, &[]).to_object(py));
+            return Ok(PyBytes::new(py, &[]).into());
         }
 
         let rt = self.rt.clone();
@@ -219,7 +219,7 @@ impl HttpResponse {
         let is_complete = self.is_complete.clone();
         let first_read_data = self.first_read_data.clone();
         let seek_allowed = self.seek_allowed.clone();
-        let data: Vec<u8> = py.allow_threads(move || {
+        let data: Vec<u8> = py.detach(move || {
             rt.block_on(async {
                 let mut response_guard = response.lock().unwrap();
                 let mut buffer_guard = buffer.lock().unwrap();
@@ -282,7 +282,7 @@ impl HttpResponse {
             })
         });
 
-        Ok(PyBytes::new(py, &data).to_object(py))
+        Ok(PyBytes::new(py, &data).into())
     }
 
     fn get_status(&self) -> PyResult<Option<u16>> {
@@ -537,7 +537,7 @@ impl HttpSession {
         url: String,
         headers: Option<HashMap<String, String>>,
         params: Option<HashMap<String, String>>,
-        data: Option<PyObject>,
+        data: Option<Bound<'_, PyAny>>,
         timeout: Option<f64>,
     ) -> PyResult<HttpResponse> {
         let client = self.client.clone();
@@ -565,12 +565,12 @@ impl HttpSession {
         }
 
         if let Some(data_obj) = data {
-            let data_bytes = if let Ok(bytes) = data_obj.extract::<&PyBytes>(py) {
+            let data_bytes = if let Ok(bytes) = data_obj.downcast::<PyBytes>() {
                 bytes.as_bytes().to_vec()
-            } else if let Ok(list) = data_obj.extract::<&PyList>(py) {
+            } else if let Ok(list) = data_obj.downcast::<PyList>() {
                 let mut result = Vec::new();
                 for (idx, item) in list.iter().enumerate() {
-                    if let Ok(bytes) = item.extract::<&PyBytes>() {
+                    if let Ok(bytes) = item.downcast::<PyBytes>() {
                         result.extend_from_slice(bytes.as_bytes());
                     } else if let Ok(vec_bytes) = item.extract::<Vec<u8>>() {
                         result.extend_from_slice(&vec_bytes);
@@ -581,57 +581,41 @@ impl HttpSession {
                     }
                 }
                 result
-            } else if let Ok(bytes_vec) = data_obj.extract::<Vec<u8>>(py) {
+            } else if let Ok(bytes_vec) = data_obj.extract::<Vec<u8>>() {
                 bytes_vec
             } else {
                 let mut result = Vec::new();
-                let iter = data_obj.getattr(py, "__iter__");
-                if let Ok(iter_fn) = iter {
-                    let iterator = iter_fn.call0(py);
-                    if let Ok(iterator_obj) = iterator {
-                        loop {
-                            let next_item = iterator_obj.getattr(py, "__next__");
-                            if let Ok(next_fn) = next_item {
-                                let next_result = next_fn.call0(py);
-                                match next_result {
-                                    Ok(item) => {
-                                        if let Ok(bytes) = item.extract::<&PyBytes>(py) {
-                                            result.extend_from_slice(bytes.as_bytes());
-                                        } else if let Ok(vec_bytes) = item.extract::<Vec<u8>>(py) {
-                                            result.extend_from_slice(&vec_bytes);
-                                        } else if let Ok(byte_array) = item.extract::<[u8; 1]>(py) {
-                                            result.extend_from_slice(&byte_array);
-                                        } else if let Ok(byte) = item.extract::<u8>(py) {
-                                            result.push(byte);
-                                        } else {
-                                            return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
-                                                "Iterator yielded unsupported type, expected bytes, bytearray, or u8"
-                                            ));
-                                        }
-                                    }
-                                    Err(e) => {
-                                        if e.is_instance_of::<pyo3::exceptions::PyStopIteration>(py) {
-                                            break;
-                                        } else {
-                                            return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
-                                                format!("Error during iteration: {}", e)
-                                            ));
-                                        }
-                                    }
-                                }
+                let iter = data_obj.getattr("__iter__")?;
+                let iterator = iter.call0()?;
+                
+                loop {
+                    let next_result = iterator.call_method0("__next__");
+                    match next_result {
+                        Ok(item) => {
+                            if let Ok(bytes) = item.downcast::<PyBytes>() {
+                                result.extend_from_slice(bytes.as_bytes());
+                            } else if let Ok(vec_bytes) = item.extract::<Vec<u8>>() {
+                                result.extend_from_slice(&vec_bytes);
+                            } else if let Ok(byte_array) = item.extract::<[u8; 1]>() {
+                                result.extend_from_slice(&byte_array);
+                            } else if let Ok(byte) = item.extract::<u8>() {
+                                result.push(byte);
                             } else {
-                                break;
+                                return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                                    "Iterator yielded unsupported type, expected bytes, bytearray, or u8"
+                                ));
                             }
                         }
-                    } else {
-                        return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
-                            "Object is not iterable"
-                        ));
+                        Err(e) => {
+                            if e.is_instance_of::<pyo3::exceptions::PyStopIteration>(py) {
+                                break;
+                            } else {
+                                return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                                    format!("Error during iteration: {}", e)
+                                ));
+                            }
+                        }
                     }
-                } else {
-                    return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
-                        "Data must be bytes, list of bytes, byte array, or iterable/generator"
-                    ));
                 }
 
                 result
@@ -663,7 +647,7 @@ impl HttpSession {
         url: String,
         headers: Option<HashMap<String, String>>,
         params: Option<HashMap<String, String>>,
-        data: Option<PyObject>,
+        data: Option<Bound<'_, PyAny>>,
         timeout: Option<f64>,
     ) -> PyResult<HttpResponse> {
         self.post(py, url, headers, params, data, timeout)
@@ -678,7 +662,7 @@ impl HttpSession {
 }
 
 #[pymodule]
-fn pyo3http(_py: Python, m: &PyModule) -> PyResult<()> {
+fn pyo3http(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<HttpSession>()?;
     m.add_class::<HttpResponse>()?;
     Ok(())

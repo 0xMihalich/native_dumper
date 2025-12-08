@@ -8,8 +8,8 @@ name = "pyo3http"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.20", features = ["extension-module"] }
-reqwest = { version = "0.11", features = ["stream", "json"] }
+pyo3 = { version = "0.26.0", features = ["extension-module"] }
+reqwest = { version = "0.12.24", features = ["stream", "json"] }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

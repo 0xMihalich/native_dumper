@@ -171,7 +171,7 @@ class NativeDumper:
                 "Reading native dump with compression "
                 f"{self.compression_method.name}."
             )
-            columns = make_columns(self.cursor.metadata(f"({query})"))
+            columns = make_columns(self.cursor.metadata(f"({query}\n)"))
             source = DBMetadata(
                 name=self.dbname,
                 version=self.version,
@@ -304,7 +304,7 @@ class NativeDumper:
         self._dbmeta = DBMetadata(
             name=self.dbname,
             version=self.version,
-            columns=make_columns(self.cursor.metadata(f"({query})")),
+            columns=make_columns(self.cursor.metadata(f"({query}\n)")),
         )
         return self.cursor.get_stream(query)
 
