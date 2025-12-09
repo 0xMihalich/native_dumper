@@ -1,5 +1,10 @@
 # Version History
 
+## 0.3.4.8
+
+* Update depends nativelib==0.2.2.5
+* Fix build from source on unix systems
+
 ## 0.3.4.7
 
 * Fix read query with comments in last line
