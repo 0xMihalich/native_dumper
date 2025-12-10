@@ -1,5 +1,9 @@
 # Version History
 
+## 0.3.4.9
+
+* Change server version view
+
 ## 0.3.4.8
 
 * Update depends nativelib==0.2.2.5
