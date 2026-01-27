@@ -1,5 +1,13 @@
 # Version History
 
+## 0.3.5.0
+
+* Update depends light-compressor==0.0.2.2
+* Update depends nativelib==0.2.2.6
+* Update depends sqlparse>=0.5.5
+* Change url link
+* Change project development status to 4 - Beta
+
 ## 0.3.4.9
 
 * Change server version view
