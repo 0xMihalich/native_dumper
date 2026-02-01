@@ -76,6 +76,7 @@ class NativeDumper:
                 compression_method=self.compression_method,
                 logger=self.logger,
                 timeout=timeout,
+                user_agent=self.__class__.__name__,
             )
             self.version = self.cursor.send_hello()
             self._dbmeta: DBMetadata | None = None

@@ -1,5 +1,9 @@
 # Version History
 
+## 0.3.5.2
+
+* Change http_user_agent HTTPCursor -> NativeDumper 
+
 ## 0.3.5.1
 
 * Fix chunk_query function

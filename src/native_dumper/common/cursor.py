@@ -37,19 +37,24 @@ class HTTPCursor:
         compression_method: CompressionMethod,
         logger: Logger,
         timeout: int,
+        user_agent: str | None = None,
     ) -> None:
         """Class initialization."""
+
+        if not user_agent:
+            user_agent = self.__class__.__name__
 
         self.connector = connector
         self.compression_method = compression_method
         self.logger = logger
         self.timeout = timeout
+        self.user_agent = user_agent
         self.session = HttpSession(timeout=self.timeout)
         self.is_connected = False
         self.headers = {
             "Accept": "*/*",
             "Connection": "keep-alive",
-            "User-Agent": f"{self.__class__.__name__}/{__version__}",
+            "User-Agent": f"{self.user_agent}/{__version__}",
             "Accept-Encoding": self.compression_method.method,
             "Content-Encoding": self.compression_method.method,
             "X-ClickHouse-User": self.connector.user,
