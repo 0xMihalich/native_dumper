@@ -1,5 +1,10 @@
 # Version History
 
+## 0.3.5.3
+
+* Downgrade depends sqlparse>=0.5.4
+* Fix error SQLParseError: Maximum number of tokens exceeded (10000)
+
 ## 0.3.5.2
 
 * Change http_user_agent HTTPCursor -> NativeDumper 
